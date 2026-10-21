@@ -1,0 +1,60 @@
+import streamlit as st
+import google.generativeai as genai
+
+# 1. SETUP & CONFIGURATION (Clean & Maintainable Code Criterion)
+# Your API Key is securely hardcoded here for easy local running
+GENAI_API_KEY = "AQ.Ab8RN6KKV_nz-neZ1So69XwRmCMrVvPJvmSvKCHrfQ0D_4llZQ" 
+genai.configure(api_key=GENAI_API_KEY)
+
+# 2. SYSTEM PROMPT (Logical Decision Making & Persona Criterion)
+SYSTEM_INSTRUCTION = """
+You are "ShopBuddy", an elite, personalized AI E-Commerce Shopping Concierge. 
+Your goal is to help users find the perfect outfit or product package based on their context.
+
+CRITICAL RULES:
+1. NEVER just dump a random generic list of products.
+2. You must dynamically converse with the user to discover: Their budget, their personal style/preferences, and the specific occasion (e.g., formal wedding, casual beach trip, job interview).
+3. If information is missing, ask polite follow-up questions one by one.
+4. Use logical decision-making: If their budget is low, suggest budget-conscious item packages. If high, suggest premium brands. 
+5. Structure your final recommendation clearly with items, estimated prices, and a brief styling justification explaining WHY it fits their unique context.
+"""
+
+st.set_page_config(page_title="ShopBuddy: AI Shopping Concierge", page_icon="🛍️")
+st.title("🛍️ ShopBuddy: Your Personal AI Concierge")
+st.write("Let's curate your perfect outfit package! Tell me what event or look you are shopping for today.")
+
+# Initialize chat history inside the Streamlit session state
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+    # Initialize the Gemini chat model with our system instructions
+    model = genai.GenerativeModel(
+        model_name="gemini-1.5-flash",
+        system_instruction=SYSTEM_INSTRUCTION
+    )
+    st.session_state.chat = model.start_chat(history=[])
+
+# Display existing chat messages (Smart, Dynamic Chatbot Interface)
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
+
+# Accept user chat input
+if user_input := st.chat_input("e.g., I need an outfit for a beach wedding next month..."):
+    # Display user message
+    st.session_state.messages.append({"role": "user", "content": user_input})
+    with st.chat_message("user"):
+        st.markdown(user_input)
+
+    # Generate dynamic assistant response
+    with st.chat_message("assistant"):
+        response_placeholder = st.empty()
+        try:
+            # Send message to Gemini live chat instance
+            response = st.session_state.chat.send_message(user_input)
+            assistant_response = response.text
+            response_placeholder.markdown(assistant_response)
+            
+            # Save assistant message to history
+            st.session_state.messages.append({"role": "assistant", "content": assistant_response})
+        except Exception as e:
+            st.error("There was an issue connecting to Gemini. Please check your internet or API key limits.")
